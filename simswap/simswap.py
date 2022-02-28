@@ -3,17 +3,14 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from lib.utils import AdaIN
-from lib.blocks import ConvBlock, ResnetBlock_Adain
+from lib.blocks import ConvBlock, AdaINResBlock
 
 
 
 class Generator_Adain_Upsample(nn.Module):
-    def __init__(self, style_dim=512, n_blocks=9):
+    def __init__(self, style_dim=512, n_blocks=9, scale_factor=1, activation='relu'):
         assert (n_blocks >= 0)
         super(Generator_Adain_Upsample, self).__init__()
-        norm_layer="bn" 
-        activation="relu"
-        padding_type="reflect"
 
         self.first_layer = ConvBlock(3, 64, kernel_size=7, stride=1, padding=3)
         self.down1 = ConvBlock(64, 128, kernel_size=3, stride=2, padding=1)
@@ -24,12 +21,12 @@ class Generator_Adain_Upsample(nn.Module):
         BN = []
         for i in range(n_blocks):
             BN += [
-                ResnetBlock_Adain(512, padding_type=padding_type, activation=activation, style_dim=style_dim)]
+                AdaINResBlock(512, 512, scale_factor=scale_factor, activation=activation, style_dim=style_dim)]
         self.BottleNeck = nn.Sequential(*BN)
         
-        self.up3 = ConvBlock(512, 256, kernel_size=3, stride=2, padding=1, upsample=True)
-        self.up2 = ConvBlock(256, 128, kernel_size=3, stride=2, padding=1, upsample=True)
-        self.up1 = ConvBlock(128, 64, kernel_size=3, stride=2, padding=1, upsample=True)
+        self.up3 = ConvBlock(512, 256, kernel_size=3, stride=2, padding=1, transpose=True)
+        self.up2 = ConvBlock(256, 128, kernel_size=3, stride=2, padding=1, transpose=True)
+        self.up1 = ConvBlock(128, 64, kernel_size=3, stride=2, padding=1, transpose=True)
         self.last_layer = ConvBlock(64, 3, kernel_size=7, stride=1, padding=3, activation_type="tanh")
 
         # face recognition model: arcface

@@ -6,6 +6,7 @@ from submodel import arcface
 from submodel.deep3dmm import ParametricFaceModel, ReconNet
 from submodel.faceparser import BiSeNet
 from lib.utils import AdaIN, weight_init
+from lib.blocks import ResBlock, AdaINResBlock
 
 
 class HififaceGenerator(nn.Module):
@@ -33,27 +34,6 @@ class HififaceGenerator(nn.Module):
         
         return I_swapped_high, I_swapped_low, z_fuse, coeff_dict_fuse
 
-
-class Decoder(nn.Module):
-    def __init__(self):
-        super(Decoder, self).__init__()
-        self.InitConv = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
-        self.AdaINResBlock1 = AdaINResBlock(512, 512, Resample_factor=1)
-        self.AdaINResBlock2 = AdaINResBlock(512, 512, Resample_factor=1)
-        self.AdaINResBlock3 = AdaINResBlock(512, 512, Resample_factor=2)
-        self.AdaINResBlock4 = AdaINResBlock(512, 512, Resample_factor=2)
-        self.AdaINResBlock5 = AdaINResBlock(512, 256, Resample_factor=2)
-
-        self.apply(weight_init)
-
-    def forward(self, feat, v_sid):
-        feat1 = self.AdaINResBlock1(feat, v_sid) # 32x128x128
-        feat2 = self.AdaINResBlock2(feat1, v_sid) # 64x64x64
-        feat3 = self.AdaINResBlock3(feat2, v_sid) # 128x32x32
-        feat4 = self.AdaINResBlock4(feat3, v_sid) # 256x16xx16
-        z_dec = self.AdaINResBlock5(feat4, v_sid) # 512x8x8
-
-        return z_dec
 
 
 class ShapeAwareIdentityExtractor(nn.Module):
@@ -123,12 +103,11 @@ class ShapeAwareIdentityExtractor(nn.Module):
 
 
 class SemanticFacialFusionModule(nn.Module):
-    def __init__(self):
+    def __init__(self, norm='in', activation='lrelu', styledim=659):
         super(SemanticFacialFusionModule, self).__init__()
 
-        self.MaskResBlock = ResBlock(256, 1, Resample_factor=1)
-        self.ResBlock = ResBlock(256, 256, Resample_factor=1)
-        self.AdaINResBlock = AdaINResBlock(256, 259, Resample_factor=1)
+        self.ResBlock = ResBlock(256, 256, scale_factor=1, norm=norm, activation=activation)
+        self.AdaINResBlock = AdaINResBlock(256, 259, scale_factor=1, activation=activation, styledim=styledim)
         
         self.F_up = F_up()
         self.face_pool = nn.AdaptiveAvgPool2d((64, 64)).eval()
@@ -176,78 +155,12 @@ class SemanticFacialFusionModule(nn.Module):
         return I_swapped_high, I_swapped_low, z_fuse
 
 
-class ResBlock(nn.Module):
-    def __init__(self, in_c, out_c, Resample_factor):
-        super(ResBlock, self).__init__()
-
-        self.InstanceNorm1 = nn.InstanceNorm2d(in_c)
-        self.InstanceNorm2 = nn.InstanceNorm2d(out_c)
-        self.LReLU = nn.LeakyReLU(0.2, inplace=True)
-        self.conv3x3_1 = nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv3x3_2 = nn.Conv2d(in_channels=out_c, out_channels=out_c, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv1x1 = nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=1, stride=1, padding=0, bias=False)
-
-        if Resample_factor == 0.5:
-            self.Resample = nn.AvgPool2d(3, stride=2, padding=1)
-
-        else:
-            self.Resample = nn.Upsample(scale_factor=Resample_factor, mode="bilinear", align_corners=False)
-
-    def forward(self, feat):
-        feat1 = self.InstanceNorm1(feat)
-        feat1 = self.LReLU(feat1)
-        feat1 = self.conv3x3_1(feat1)
-        feat1 = self.Resample(feat1)
-        feat1 = self.InstanceNorm2(feat1)
-        feat1 = self.LReLU(feat1)
-        feat1 = self.conv3x3_2(feat1)
-
-        feat2 = self.conv1x1(feat)
-        feat2 = self.Resample(feat2)
-
-        return feat1 + feat2
-
-
-class AdaINResBlock(nn.Module):
-    def __init__(self, in_c, out_c, Resample_factor):
-        super(AdaINResBlock, self).__init__()
-
-        self.LReLU = nn.LeakyReLU(0.2, inplace=True)
-
-        self.AdaIN1 = AdaIN(659, in_c)
-        self.AdaIN2 = AdaIN(659, out_c)
-        self.conv3x3_1 = nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv3x3_2 = nn.Conv2d(in_channels=out_c, out_channels=out_c, kernel_size=3, stride=1, padding=1, bias=False)
-        self.conv1x1 = nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=1, stride=1, padding=0, bias=False)
-
-        if Resample_factor == 0.5:
-            self.Resample = nn.AvgPool2d(3, stride=2, padding=1)
-
-        else:
-            self.Resample = nn.Upsample(scale_factor=Resample_factor, mode="bilinear", align_corners=False)
-        self.count = 0
-
-    def forward(self, feat, v_sid):
-        feat1 = self.AdaIN1(feat, v_sid)
-        feat1 = self.LReLU(feat1)
-        feat1 = self.conv3x3_1(feat1)
-        feat1 = self.Resample(feat1)
-        feat1 = self.AdaIN2(feat1, v_sid)
-        feat1 = self.LReLU(feat1)
-        feat1 = self.conv3x3_2(feat1)
-
-        feat2 = self.conv1x1(feat)
-        feat2 = self.Resample(feat2)
-
-        return feat1 + feat2
-
-
 class F_up(nn.Module):
-    def __init__(self):
+    def __init__(self, norm='in', activation='lrelu'):
         super(F_up, self).__init__()
-        self.ResBlock_image1 = ResBlock(256, 256, Resample_factor=2)
-        self.ResBlock_image2 = ResBlock(256, 256, Resample_factor=2)
-        self.ResBlock_image3 = ResBlock(256, 64, Resample_factor=1)
+        self.ResBlock_image1 = ResBlock(256, 256, scale_factor=2, norm=norm, activation=activation)
+        self.ResBlock_image2 = ResBlock(256, 256, scale_factor=2, norm=norm, activation=activation)
+        self.ResBlock_image3 = ResBlock(256, 64, scale_factor=1, norm=norm, activation=activation)
         self.LastConv = nn.Conv2d(in_channels=64, out_channels=3, kernel_size=7, stride=1, padding=3, bias=False)
         self.Tanh = nn.Tanh()
 
@@ -261,17 +174,17 @@ class F_up(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self):
+    def __init__(self, norm='in', activation='lrelu'):
         super(Encoder, self).__init__()
 
         self.InitConv = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=7, stride=1, padding=3, bias=False)
-        self.ResBlock1 = ResBlock(64, 128, Resample_factor=0.5)
-        self.ResBlock2 = ResBlock(128, 256, Resample_factor=0.5)
-        self.ResBlock3 = ResBlock(256, 512, Resample_factor=0.5)
-        self.ResBlock4 = ResBlock(512, 512, Resample_factor=0.5)
-        self.ResBlock5 = ResBlock(512, 512, Resample_factor=0.5)
-        self.ResBlock6 = ResBlock(512, 512, Resample_factor=1)
-        self.ResBlock7 = ResBlock(512, 512, Resample_factor=1)
+        self.ResBlock1 = ResBlock(64, 128, scale_factor=0.5, norm=norm, activation=activation)
+        self.ResBlock2 = ResBlock(128, 256, scale_factor=0.5, norm=norm, activation=activation)
+        self.ResBlock3 = ResBlock(256, 512, scale_factor=0.5, norm=norm, activation=activation)
+        self.ResBlock4 = ResBlock(512, 512, scale_factor=0.5, norm=norm, activation=activation)
+        self.ResBlock5 = ResBlock(512, 512, scale_factor=0.5, norm=norm, activation=activation)
+        self.ResBlock6 = ResBlock(512, 512, scale_factor=1, norm=norm, activation=activation)
+        self.ResBlock7 = ResBlock(512, 512, scale_factor=1, norm=norm, activation=activation)
 
         self.apply(weight_init)
 
@@ -286,3 +199,25 @@ class Encoder(nn.Module):
         feat7 = self.ResBlock7(feat6) # 1024x4x4
 
         return feat7, feat2
+
+class Decoder(nn.Module):
+    def __init__(self, activation='lrelu', styledim=659):
+        super(Decoder, self).__init__()
+
+        self.InitConv = nn.Conv2d(in_channels=3, out_channels=64, kernel_size=3, stride=1, padding=1, bias=False)
+        self.AdaINResBlock1 = AdaINResBlock(512, 512, scale_factor=1, activation=activation, styledim=styledim)
+        self.AdaINResBlock2 = AdaINResBlock(512, 512, scale_factor=1, activation=activation, styledim=styledim)
+        self.AdaINResBlock3 = AdaINResBlock(512, 512, scale_factor=2, activation=activation, styledim=styledim)
+        self.AdaINResBlock4 = AdaINResBlock(512, 512, scale_factor=2, activation=activation, styledim=styledim)
+        self.AdaINResBlock5 = AdaINResBlock(512, 256, scale_factor=2, activation=activation, styledim=styledim)
+
+        self.apply(weight_init)
+
+    def forward(self, feat, v_sid):
+        feat1 = self.AdaINResBlock1(feat, v_sid) # 32x128x128
+        feat2 = self.AdaINResBlock2(feat1, v_sid) # 64x64x64
+        feat3 = self.AdaINResBlock3(feat2, v_sid) # 128x32x32
+        feat4 = self.AdaINResBlock4(feat3, v_sid) # 256x16xx16
+        z_dec = self.AdaINResBlock5(feat4, v_sid) # 512x8x8
+
+        return z_dec
