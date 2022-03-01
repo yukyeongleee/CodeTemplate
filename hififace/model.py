@@ -3,7 +3,7 @@ import torch
 from lib import checkpoint, utils
 from lib.faceswap import FaceSwapInterface
 from hififace.loss import HifiFaceLoss
-from hififace.hififace import HififaceGenerator
+from hififace.nets import HififaceGenerator
 from submodel.discriminator import StarGANv2Discriminator
 
 
