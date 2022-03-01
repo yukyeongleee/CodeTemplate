@@ -7,7 +7,7 @@ class SimSwapLoss(LossInterface):
         
         # Adversarial loss
         if self.args.W_adv:
-            L_adv = Loss.get_softplus_loss(G_dict["g_fake"], True)
+            L_adv = Loss.get_BCE_loss(G_dict["g_fake"], True)
             L_G += self.args.W_adv * L_adv
             self.loss_dict["L_adv"] = round(L_adv.item(), 4)
         
@@ -25,7 +25,7 @@ class SimSwapLoss(LossInterface):
         
         # LPIPS loss
         if self.args.W_lpips:
-            L_lpips = Loss.get_lpips_loss(G_dict["I_cycle"], G_dict["I_target"])
+            L_lpips = Loss.get_lpips_loss(G_dict["I_swapped"], G_dict["I_target"])
             L_G += self.args.W_lpips * L_lpips
             self.loss_dict["L_lpips"] = round(L_lpips.item(), 4)
         
@@ -47,10 +47,10 @@ class SimSwapLoss(LossInterface):
 
     def get_loss_D(self, D_dict):
         # Real 
-        L_D_real = Loss.get_softplus_loss(D_dict["d_real"], True)
-        L_D_fake = Loss.get_softplus_loss(D_dict["d_fake"], False)
-
-        L_D = 0.5*(L_D_real.mean() + L_D_fake.mean())
+        L_D_real = Loss.get_BCE_loss(D_dict["d_real"], True)
+        L_D_fake = Loss.get_BCE_loss(D_dict["d_fake"], False)
+        L_reg = Loss.get_r1_reg(L_D_real, D_dict["I_target"])
+        L_D = L_D_real + L_D_fake + L_reg
         
         self.loss_dict["L_D_real"] = round(L_D_real.mean().item(), 4)
         self.loss_dict["L_D_fake"] = round(L_D_fake.mean().item(), 4)

@@ -2,7 +2,7 @@ import torch
 from lib import checkpoint, utils
 from lib.model import ModelInterface
 from simswap.nets import Generator_Adain_Upsample
-from submodel.discriminator import Discriminator
+from submodel.discriminator import StarGANv2Discriminator
 from simswap.loss import SimSwapLoss
 
 
@@ -13,22 +13,7 @@ class SimSwap(ModelInterface):
 
     def initialize_models(self):
         self.G = Generator_Adain_Upsample().cuda(self.gpu).train()
-        self.D = Discriminator().cuda(self.gpu).train()
-
-    def set_multi_GPU(self):
-        utils.setup_ddp(self.gpu, self.args.gpu_num)
-
-        # Data parallelism is required to use multi-GPU
-        self.G = torch.nn.parallel.DistributedDataParallel(self.G, device_ids=[self.gpu], broadcast_buffers=False, find_unused_parameters=True).module
-        self.D = torch.nn.parallel.DistributedDataParallel(self.D, device_ids=[self.gpu]).module
-        
-    def load_checkpoint(self, step=-1):
-        checkpoint.load_checkpoint(self.args, self.G, self.opt_G, name='G', global_step=step)
-        checkpoint.load_checkpoint(self.args, self.D, self.opt_D, name='D', global_step=step)
-
-    def set_optimizers(self):
-        self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.args.lr_G, betas=(0, 0.999))
-        self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.args.lr_D, betas=(0, 0.999))
+        self.D = StarGANv2Discriminator().cuda(self.gpu).train()
 
     def set_loss_collector(self):
         self._loss_collector = SimSwapLoss(self.args)
@@ -72,10 +57,12 @@ class SimSwap(ModelInterface):
         # Train D #
         ###########
 
+        I_target.requires_grad_()
         d_real = self.D(I_target)
         d_fake = self.D(I_swapped.detach())
 
         D_dict = {
+            "I_target": I_target,
             "d_real": d_real,
             "d_fake": d_fake,
         }
@@ -84,10 +71,6 @@ class SimSwap(ModelInterface):
         utils.update_net(self.opt_D, loss_D)
 
         return [I_source, I_target, I_swapped]
-
-    def save_checkpoint(self, step):
-        checkpoint.save_checkpoint(self.args, self.G, self.opt_G, name='G', global_step=step)
-        checkpoint.save_checkpoint(self.args, self.D, self.opt_D, name='D', global_step=step)
 
     def validation(self, step):
         with torch.no_grad():

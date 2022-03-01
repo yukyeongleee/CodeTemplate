@@ -81,11 +81,11 @@ class ResBlock(nn.Module):
 
 
 class AdaINResBlock(nn.Module):
-    def __init__(self, in_c, out_c, scale_factor=1, activation='lrelu', styledim=512):
+    def __init__(self, in_c, out_c, scale_factor=1, activation='lrelu', style_dim=512):
         super(AdaINResBlock, self).__init__()
 
-        self.AdaIN1 = AdaIN(styledim, in_c)
-        self.AdaIN2 = AdaIN(styledim, out_c)
+        self.AdaIN1 = AdaIN(style_dim, in_c)
+        self.AdaIN2 = AdaIN(style_dim, out_c)
         self.activ = set_activate_layer(activation)
         self.conv1 = nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=3, stride=1, padding=1, bias=False)
         self.conv2 = nn.Conv2d(in_channels=out_c, out_channels=out_c, kernel_size=3, stride=1, padding=1, bias=False)
