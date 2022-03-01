@@ -3,7 +3,7 @@ import wandb
 import os
 import sys
 from lib.options import BaseOptions
-from lib.model import CreateModel
+from lib.model_loader import CreateModel
 
 sys.path.append("./")
 sys.path.append("./submodel/")
@@ -11,10 +11,9 @@ sys.path.append("./submodel/")
 
 def train(gpu, args): 
     torch.cuda.set_device(gpu)
-    model, step = CreateModel(gpu, args)
+    model, args, step = CreateModel(gpu, args)
 
     # Initialize wandb to gather and display loss on dashboard 
-    args.isMaster = gpu == 0
     if args.isMaster and args.use_wandb:
         wandb.init(project=args.model_id, name=args.run_id)
 
@@ -31,7 +30,7 @@ def train(gpu, args):
                 model.loss_collector.print_loss(global_step)
 
             # Save image
-            if global_step % args.image_cycle == 0:
+            if global_step % args.test_cycle == 0:
                 model.save_image(result, global_step)
 
                 if args.valid_dataset_root:

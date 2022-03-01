@@ -17,13 +17,13 @@ class BaseOptions:
         self.parser.add_argument('--model_id', type=str, required=True)
             
         self.parser.add_argument('--valid_dataset_root', type=str, \
-            default='/home/compu/abc/samples', help="dir path or None")
+            default='assets/valid', help="dir path or None")
 
         # Log
         self.parser.add_argument('--loss_cycle', type=str, default=10)
-        self.parser.add_argument('--image_cycle', type=str, default=100)
+        self.parser.add_argument('--test_cycle', type=str, default=1000)
         self.parser.add_argument('--ckpt_cycle', type=str, default=10000)
-        self.parser.add_argument('--save_root', type=str, default="training_result")
+        self.parser.add_argument('--save_root', type=str, default="train_result")
 
         # Loss Weight pool
         # W_id, W_shape, W_adv, W_recon, W_seg, W_cycle, 

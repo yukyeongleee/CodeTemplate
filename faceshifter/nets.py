@@ -93,12 +93,12 @@ class MLAttrEncoder(nn.Module):
         self.conv6 = ConvBlock(512, 1024, 3, 2, 1, norm_type=norm, activation_type=activation)
         self.conv7 = ConvBlock(1024, 1024, 3, 2, 1, norm_type=norm, activation_type=activation)
 
-        self.deconv1 = ConvBlock(1024, 1024, 3, 2, 1, norm_type=norm, activation_type=activation, upsample=True)
-        self.deconv2 = ConvBlock(2048, 512, 3, 2, 1, norm_type=norm, activation_type=activation, upsample=True)
-        self.deconv3 = ConvBlock(1024, 256, 3, 2, 1, norm_type=norm, activation_type=activation, upsample=True)
-        self.deconv4 = ConvBlock(512, 128, 3, 2, 1, norm_type=norm, activation_type=activation, upsample=True)
-        self.deconv5 = ConvBlock(256, 64, 3, 2, 1, norm_type=norm, activation_type=activation, upsample=True)
-        self.deconv6 = ConvBlock(128, 32, 3, 2, 1, norm_type=norm, activation_type=activation, upsample=True)
+        self.deconv1 = ConvBlock(1024, 1024, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
+        self.deconv2 = ConvBlock(2048, 512, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
+        self.deconv3 = ConvBlock(1024, 256, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
+        self.deconv4 = ConvBlock(512, 128, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
+        self.deconv5 = ConvBlock(256, 64, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
+        self.deconv6 = ConvBlock(128, 32, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
 
         self.apply(weight_init)
 

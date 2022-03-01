@@ -1,13 +1,13 @@
 import torch
 from lib import checkpoint, utils
-from lib.faceswap import FaceSwapInterface
+from lib.model import ModelInterface
 from stylerig.loss import StyleRigLoss
 from stylerig.stylerig import RIGNET
 from submodel.discriminator import LatentCodesDiscriminator
 import torch.nn.functional as F
 
 
-class StyleRig(FaceSwapInterface):
+class StyleRig(ModelInterface):
     def initialize_models(self):
         self.G = RIGNET().cuda(self.gpu).train()
         self.D = LatentCodesDiscriminator().cuda(self.gpu).train()

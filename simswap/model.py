@@ -1,12 +1,12 @@
 import torch
 from lib import checkpoint, utils
-from lib.faceswap import FaceSwapInterface
+from lib.model import ModelInterface
 from simswap.nets import Generator_Adain_Upsample
 from submodel.discriminator import Discriminator
 from simswap.loss import SimSwapLoss
 
 
-class SimSwap(FaceSwapInterface):
+class SimSwap(ModelInterface):
     def __init__(self, args, gpu):
         self.downsample = torch.nn.AvgPool2d(3, stride=2, padding=[1, 1], count_include_pad=False)
         super().__init__(args, gpu)

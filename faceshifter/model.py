@@ -1,82 +1,65 @@
 import torch
 from lib import checkpoint, utils
-from lib.faceswap import FaceSwapInterface
+from lib.model import ModelInterface
 from faceshifter.loss import FaceShifterLoss
 from faceshifter.nets import AEI_Net
-from submodel.discriminator import MultiscaleDiscriminator
+from submodel.discriminator import StarGANv2Discriminator # with BCE
+import time
 
-
-class FaceShifter(FaceSwapInterface):
+class FaceShifter(ModelInterface):
     def initialize_models(self):
         self.G = AEI_Net().cuda(self.gpu).train()
-        self.D = MultiscaleDiscriminator().cuda(self.gpu).train()
-
-    def set_multi_GPU(self):
-        utils.setup_ddp(self.gpu, self.args.gpu_num)
-
-        # Data parallelism is required to use multi-GPU
-        self.G = torch.nn.parallel.DistributedDataParallel(self.G, device_ids=[self.gpu], broadcast_buffers=False, find_unused_parameters=True).module
-        self.D = torch.nn.parallel.DistributedDataParallel(self.D, device_ids=[self.gpu]).module
-        
-    def load_checkpoint(self, step=-1):
-        checkpoint.load_checkpoint(self.args, self.G, self.opt_G, name='G', global_step=step)
-        checkpoint.load_checkpoint(self.args, self.D, self.opt_D, name='D', global_step=step)
-
-    def set_optimizers(self):
-        self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.args.lr_G, betas=(0, 0.999))
-        self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.args.lr_D, betas=(0, 0.999))
+        self.D = StarGANv2Discriminator().cuda(self.gpu).train()
 
     def set_loss_collector(self):
         self._loss_collector = FaceShifterLoss(self.args)
 
     def train_step(self):
+        # load batch
         I_source, I_target, same_person = self.load_next_batch()
-        
-        ###########
-        # train G #
-        ###########
 
-        I_swapped, id_source, attr_target  = self.G(I_source, I_target)
-        attr_swapped = self.G.get_attr(I_target)
-        id_swapped = self.get_id(I_swapped)
-
-        d_adv = self.D(I_swapped)
-
-        G_dict = {
+        self.dict = {
             "I_source": I_source,
             "I_target": I_target, 
-            "I_swapped": I_swapped,
-
             "same_person": same_person,
-
-            "attr_target": attr_target,
-            "attr_swapped": attr_swapped,
-
-            "id_source": id_source,
-            "id_swapped": id_swapped,
-
-            "d_adv": d_adv
         }
 
-        loss_G = self.loss_collector.get_loss_G(G_dict)
+        # run G
+        self.run_G()
+
+        # update G
+        loss_G = self.loss_collector.get_loss_G(self.dict)
         utils.update_net(self.opt_G, loss_G)
 
-        ###########
-        # train D #
-        ###########
+        # run D
+        self.run_D()
 
-        d_real = self.D(I_source)
-        d_fake = self.D(I_swapped.detach())
-
-        D_dict = {
-            "d_real": d_real,
-            "d_fake": d_fake,
-        }
-        
-        loss_D = self.loss_collector.get_loss_D(D_dict)
+        # update D
+        loss_D = self.loss_collector.get_loss_D(self.dict)
         utils.update_net(self.opt_D, loss_D)
 
-        return [I_source, I_target, I_swapped]
+        return [self.dict["I_source"], self.dict["I_target"], self.dict["I_swapped"]]
+
+    def run_G(self):
+        I_swapped, id_source, attr_target  = self.G(self.dict["I_source"], self.dict["I_target"])
+        attr_swapped = self.G.get_attr(self.dict["I_target"])
+        id_swapped = self.G.get_id(I_swapped)
+        d_adv = self.D(I_swapped)
+
+        self.dict["I_swapped"] = I_swapped
+        self.dict["attr_target"] = attr_target
+        self.dict["attr_swapped"] = attr_swapped
+        self.dict["id_source"] = id_source
+        self.dict["id_swapped"] = id_swapped
+        self.dict["d_adv"] = d_adv
+
+    def run_D(self):
+        self.dict["I_source"].requires_grad_()
+        d_real = self.D(self.dict["I_source"])
+        d_fake = self.D(self.dict["I_swapped"].detach())
+
+        self.dict["d_real"] = d_real
+        self.dict["d_fake"] = d_fake
 
     def validation(self, step):
         with torch.no_grad():
@@ -85,10 +68,6 @@ class FaceShifter(FaceSwapInterface):
 
     def save_image(self, result, step):
         utils.save_image(self.args, step, "imgs", result)
-        
-    def save_checkpoint(self, step):
-        checkpoint.save_checkpoint(self.args, self.G, self.opt_G, name='G', global_step=step)
-        checkpoint.save_checkpoint(self.args, self.D, self.opt_D, name='D', global_step=step)
 
     @property
     def loss_collector(self):

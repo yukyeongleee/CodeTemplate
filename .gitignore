@@ -1,4 +1,4 @@
-training_result/
+train_result/
 wandb/
 *.pyc
 *__pycache__
@@ -81,7 +81,7 @@ instance/
 docs/_build/
 
 # PyBuilder
-target/
+# target/
 
 # Jupyter Notebook
 .ipynb_checkpoints

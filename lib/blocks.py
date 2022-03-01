@@ -53,7 +53,6 @@ class ConvBlock(nn.Module):
         return x
 
 
-# from hififace
 class ResBlock(nn.Module):
     def __init__(self, in_c, out_c, scale_factor=1, norm='in', activation='lrelu'):
         super(ResBlock, self).__init__()
@@ -102,7 +101,8 @@ class AdaINResBlock(nn.Module):
         feat1 = self.activ(feat1)
         feat1 = self.conv2(feat1)
 
-        feat2 = self.conv1x1(feat)
-        feat2 = self.resize(feat2)
+        # skip connction
+        feat2 = self.conv1x1(feat) # chnnel dim
+        feat2 = self.resize(feat2) # size 
 
         return feat1 + feat2

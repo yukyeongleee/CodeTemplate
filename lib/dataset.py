@@ -24,6 +24,7 @@ class FaceDatasetTrain(Dataset):
 
         self.transforms = transforms.Compose([
             transforms.Resize((256,256)),
+            transforms.RandomHorizontalFlip(p=0.5),
             transforms.ColorJitter(0.2, 0.2, 0.2, 0.01),
             transforms.ToTensor(),
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))

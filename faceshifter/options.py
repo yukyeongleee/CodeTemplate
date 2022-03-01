@@ -22,6 +22,8 @@ class TrainOptions(BaseOptions):
         # Learning rate
         self.parser.add_argument('--lr_G', type=str, default=1e-4)
         self.parser.add_argument('--lr_D', type=str, default=4e-5)
+        self.parser.add_argument('--beta1', type=float, default=0)
+        self.parser.add_argument('--beta2', type=float, default=0.999)
 
         # Weight
         self.parser.add_argument('--W_adv', type=float, default=1)
