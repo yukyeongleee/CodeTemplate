@@ -2,60 +2,19 @@ import torch
 import wandb
 import os
 import sys
-import numpy as np
 from lib.options import BaseOptions
+from lib.model import CreateModel
 
 sys.path.append("./")
 sys.path.append("./submodel/")
-sys.path.append("./submodel/stylegan2")
 
 
 def train(gpu, args): 
-
-    if args.model_id == 'simswap':
-        from simswap.model import SimSwap
-        from simswap.options import TrainOptions
-        args = TrainOptions().parse()
-        model = SimSwap(args, gpu)
-
-    elif args.model_id == 'faceshifter':
-        from faceshifter.model import FaceShifter
-        from faceshifter.options import TrainOptions
-        args = TrainOptions().parse()
-        model = FaceShifter(args, gpu)
-
-    elif args.model_id == 'hififace':
-        from hififace.model import HifiFace
-        from hififace.options import TrainOptions
-        args = TrainOptions().parse()
-        model = HifiFace(args, gpu)
-
-    elif args.model_id == 'stylerig':
-        from stylerig.model import StyleRig
-        from stylerig.options import TrainOptions
-        args = TrainOptions().parse()
-        model = StyleRig(args, gpu)
-        
-    else:
-        print(f"{args.model} is not supported.")
-        exit()
-
     torch.cuda.set_device(gpu)
-    args.isMaster = gpu == 0
-    model.RandomGenerator = np.random.RandomState(42)
-    model.initialize_models()
-    model.set_dataset()
-
-    if args.use_mGPU:
-        model.set_multi_GPU()
-
-    model.set_data_iterator()
-    model.set_validation()
-    model.set_optimizers()
-    step = model.load_checkpoint()
-    model.set_loss_collector()
+    model, step = CreateModel(gpu, args)
 
     # Initialize wandb to gather and display loss on dashboard 
+    args.isMaster = gpu == 0
     if args.isMaster and args.use_wandb:
         wandb.init(project=args.model_id, name=args.run_id)
 

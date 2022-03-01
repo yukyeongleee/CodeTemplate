@@ -36,9 +36,9 @@ class FaceShifter(FaceSwapInterface):
         # train G #
         ###########
 
-        I_swapped, I_source_id, I_target_attr  = self.G(I_source, I_target)
-        I_cycle, I_target_id, I_swapped_attr = self.G(I_target, I_swapped)
-        I_swapped_id = self.G.get_id(I_swapped)
+        I_swapped, id_source, attr_target  = self.G(I_source, I_target)
+        attr_swapped = self.G.get_attr(I_target)
+        id_swapped = self.get_id(I_swapped)
 
         d_adv = self.D(I_swapped)
 
@@ -46,12 +46,14 @@ class FaceShifter(FaceSwapInterface):
             "I_source": I_source,
             "I_target": I_target, 
             "I_swapped": I_swapped,
-            "I_cycle": I_cycle,
 
             "same_person": same_person,
 
-            "I_source_id": I_source_id,
-            "I_swapped_id": I_swapped_id,
+            "attr_target": attr_target,
+            "attr_swapped": attr_swapped,
+
+            "id_source": id_source,
+            "id_swapped": id_swapped,
 
             "d_adv": d_adv
         }
@@ -74,7 +76,7 @@ class FaceShifter(FaceSwapInterface):
         loss_D = self.loss_collector.get_loss_D(D_dict)
         utils.update_net(self.opt_D, loss_D)
 
-        return [I_source, I_target, I_swapped, I_cycle]
+        return [I_source, I_target, I_swapped]
 
     def validation(self, step):
         with torch.no_grad():
