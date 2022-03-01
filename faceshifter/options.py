@@ -9,7 +9,7 @@ class TrainOptions(BaseOptions):
         # Hyperparameters
         self.parser.add_argument('--batch_per_gpu', type=str, default=8)
         self.parser.add_argument('--max_step', type=str, default=400000)
-        self.parser.add_argument('--same_prob', type=float, default=20)
+        self.parser.add_argument('--same_prob', type=float, default=0.2)
 
         # Dataset
         self.parser.add_argument('--train_dataset_root_list', type=list, \
