@@ -4,6 +4,7 @@ wandb/
 *__pycache__
 hififace/BFM/*
 ptnn/*
+!ptnn\.gitkeep
 *.zip
 submodel/BFM/
 samples/*.*g
