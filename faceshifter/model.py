@@ -42,7 +42,7 @@ class FaceShifter(ModelInterface):
 
     def run_G(self):
         I_swapped, id_source, attr_target  = self.G(self.dict["I_source"], self.dict["I_target"])
-        attr_swapped = self.G.get_attr(self.dict["I_target"])
+        attr_swapped = self.G.get_attr(I_swapped)
         id_swapped = self.G.get_id(I_swapped)
         d_adv = self.D(I_swapped)
 

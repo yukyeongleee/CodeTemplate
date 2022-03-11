@@ -1,13 +1,13 @@
 
 import torch
 from lib import checkpoint, utils
-from lib.model import FaceSwapInterface
+from lib.model import ModelInterface
 from hififace.loss import HifiFaceLoss
 from hififace.nets import HififaceGenerator
 from submodel.discriminator import StarGANv2Discriminator
 
 
-class HifiFace(FaceSwapInterface):
+class HifiFace(ModelInterface):
     def __init__(self, args, gpu):
         self.upsample = torch.nn.Upsample(scale_factor=4).to(gpu).eval()
         super().__init__(args, gpu)

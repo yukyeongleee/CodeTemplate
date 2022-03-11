@@ -2,24 +2,51 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from submodel import arcface
-from lib.utils import weight_init
-from lib.blocks import ConvBlock
 
+def weight_init(m):
+    if isinstance(m, nn.Linear):
+        m.weight.data.normal_(0, 0.001)
+        m.bias.data.zero_()
+    if isinstance(m, nn.Conv2d):
+        nn.init.xavier_normal_(m.weight.data)
+
+    if isinstance(m, nn.ConvTranspose2d):
+        nn.init.xavier_normal_(m.weight.data)
+
+def conv4x4(in_c, out_c, norm=nn.BatchNorm2d):
+    return nn.Sequential(
+        nn.Conv2d(in_channels=in_c, out_channels=out_c, kernel_size=4, stride=2, padding=1, bias=False),
+        norm(out_c),
+        nn.LeakyReLU(0.1, inplace=True)
+    )
+
+class deconv4x4(nn.Module):
+    def __init__(self, in_c, out_c, norm=nn.BatchNorm2d):
+        super(deconv4x4, self).__init__()
+        self.deconv = nn.ConvTranspose2d(in_channels=in_c, out_channels=out_c, kernel_size=4, stride=2, padding=1, bias=False)
+        self.bn = norm(out_c)
+        self.lrelu = nn.LeakyReLU(0.1, inplace=True)
+
+    def forward(self, input, skip):
+        x = self.deconv(input)
+        x = self.bn(x)
+        x = self.lrelu(x)
+        return torch.cat((x, skip), dim=1)
 
 class AADLayer(nn.Module):
-    def __init__(self, cin, c_attr, c_id=512):
+    def __init__(self, c_x, attr_c, c_id=256):
         super(AADLayer, self).__init__()
-        self.c_attr = c_attr
+        self.attr_c = attr_c
         self.c_id = c_id
-        self.cin = cin
+        self.c_x = c_x
 
-        self.conv1 = nn.Conv2d(c_attr, cin, kernel_size=1, stride=1, padding=0, bias=True)
-        self.conv2 = nn.Conv2d(c_attr, cin, kernel_size=1, stride=1, padding=0, bias=True)
-        self.fc1 = nn.Linear(c_id, cin)
-        self.fc2 = nn.Linear(c_id, cin)
-        self.norm = nn.InstanceNorm2d(cin, affine=False)
+        self.conv1 = nn.Conv2d(attr_c, c_x, kernel_size=1, stride=1, padding=0, bias=True)
+        self.conv2 = nn.Conv2d(attr_c, c_x, kernel_size=1, stride=1, padding=0, bias=True)
+        self.fc1 = nn.Linear(c_id, c_x)
+        self.fc2 = nn.Linear(c_id, c_x)
+        self.norm = nn.InstanceNorm2d(c_x, affine=False)
 
-        self.conv_h = nn.Conv2d(cin, 1, kernel_size=1, stride=1, padding=0, bias=True)
+        self.conv_h = nn.Conv2d(c_x, 1, kernel_size=1, stride=1, padding=0, bias=True)
 
     def forward(self, h_in, z_attr, z_id):
         # h_in cxnxn
@@ -32,8 +59,8 @@ class AADLayer(nn.Module):
         gamma_id = self.fc1(z_id)
         beta_id = self.fc2(z_id)
         A = gamma_attr * h + beta_attr
-        gamma_id = gamma_id.reshape(h.shape[0], self.cin, 1, 1).expand_as(h)
-        beta_id = beta_id.reshape(h.shape[0], self.cin, 1, 1).expand_as(h)
+        gamma_id = gamma_id.reshape(h.shape[0], self.c_x, 1, 1).expand_as(h)
+        beta_id = beta_id.reshape(h.shape[0], self.c_x, 1, 1).expand_as(h)
         I = gamma_id * h + beta_id
 
         M = torch.sigmoid(self.conv_h(h))
@@ -41,9 +68,8 @@ class AADLayer(nn.Module):
         out = (torch.ones_like(M).to(M.device) - M) * A + M * I
         return out
 
-
 class AAD_ResBlk(nn.Module):
-    def __init__(self, cin, cout, c_attr, c_id=512):
+    def __init__(self, cin, cout, c_attr, c_id=256):
         super(AAD_ResBlk, self).__init__()
         self.cin = cin
         self.cout = cout
@@ -78,27 +104,23 @@ class AAD_ResBlk(nn.Module):
         
         return x
 
-
 class MLAttrEncoder(nn.Module):
     def __init__(self):
         super(MLAttrEncoder, self).__init__()
-        norm = "bn"
-        activation = "lrelu"
-        
-        self.conv1 = ConvBlock(3, 32, 3, 2, 1, norm_type=norm, activation_type=activation)
-        self.conv2 = ConvBlock(32, 64, 3, 2, 1, norm_type=norm, activation_type=activation)
-        self.conv3 = ConvBlock(64, 128, 3, 2, 1, norm_type=norm, activation_type=activation)
-        self.conv4 = ConvBlock(128, 256, 3, 2, 1, norm_type=norm, activation_type=activation)
-        self.conv5 = ConvBlock(256, 512, 3, 2, 1, norm_type=norm, activation_type=activation)
-        self.conv6 = ConvBlock(512, 1024, 3, 2, 1, norm_type=norm, activation_type=activation)
-        self.conv7 = ConvBlock(1024, 1024, 3, 2, 1, norm_type=norm, activation_type=activation)
+        self.conv1 = conv4x4(3, 32)
+        self.conv2 = conv4x4(32, 64)
+        self.conv3 = conv4x4(64, 128)
+        self.conv4 = conv4x4(128, 256)
+        self.conv5 = conv4x4(256, 512)
+        self.conv6 = conv4x4(512, 1024)
+        self.conv7 = conv4x4(1024, 1024)
 
-        self.deconv1 = ConvBlock(1024, 1024, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
-        self.deconv2 = ConvBlock(2048, 512, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
-        self.deconv3 = ConvBlock(1024, 256, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
-        self.deconv4 = ConvBlock(512, 128, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
-        self.deconv5 = ConvBlock(256, 64, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
-        self.deconv6 = ConvBlock(128, 32, 3, 2, 1, norm_type=norm, activation_type=activation, transpose=True)
+        self.deconv1 = deconv4x4(1024, 1024)
+        self.deconv2 = deconv4x4(2048, 512)
+        self.deconv3 = deconv4x4(1024, 256)
+        self.deconv4 = deconv4x4(512, 128)
+        self.deconv5 = deconv4x4(256, 64)
+        self.deconv6 = deconv4x4(128, 32)
 
         self.apply(weight_init)
 
@@ -118,27 +140,26 @@ class MLAttrEncoder(nn.Module):
         z_attr1 = self.conv7(feat6)
         # 1024x2x2
 
-        z_attr2 = self.deconv1(z_attr1)
-        z_attr3 = self.deconv2(torch.cat((z_attr2, feat6), dim=1))
-        z_attr4 = self.deconv3(torch.cat((z_attr3, feat5), dim=1))
-        z_attr5 = self.deconv4(torch.cat((z_attr4, feat4), dim=1))
-        z_attr6 = self.deconv5(torch.cat((z_attr5, feat3), dim=1))
-        z_attr7 = self.deconv6(torch.cat((z_attr6, feat2), dim=1))
-        z_attr8 = F.interpolate(torch.cat((z_attr7, feat1), dim=1), scale_factor=2, mode='bilinear', align_corners=True)
+        z_attr2 = self.deconv1(z_attr1, feat6)
+        z_attr3 = self.deconv2(z_attr2, feat5)
+        z_attr4 = self.deconv3(z_attr3, feat4)
+        z_attr5 = self.deconv4(z_attr4, feat3)
+        z_attr6 = self.deconv5(z_attr5, feat2)
+        z_attr7 = self.deconv6(z_attr6, feat1)
+        z_attr8 = F.interpolate(z_attr7, scale_factor=2, mode='bilinear', align_corners=True)
         return z_attr1, z_attr2, z_attr3, z_attr4, z_attr5, z_attr6, z_attr7, z_attr8
 
-
 class AADGenerator(nn.Module):
-    def __init__(self, c_id=512):
+    def __init__(self, c_id=256):
         super(AADGenerator, self).__init__()
         self.up1 = nn.ConvTranspose2d(c_id, 1024, kernel_size=2, stride=1, padding=0)
         self.AADBlk1 = AAD_ResBlk(1024, 1024, 1024, c_id)
-        self.AADBlk2 = AAD_ResBlk(1024, 1024, 1024, c_id)
-        self.AADBlk3 = AAD_ResBlk(1024, 1024, 512, c_id)
-        self.AADBlk4 = AAD_ResBlk(1024, 512, 256, c_id)
-        self.AADBlk5 = AAD_ResBlk(512, 256, 128, c_id)
-        self.AADBlk6 = AAD_ResBlk(256, 128, 64, c_id)
-        self.AADBlk7 = AAD_ResBlk(128, 64, 32, c_id)
+        self.AADBlk2 = AAD_ResBlk(1024, 1024, 2048, c_id)
+        self.AADBlk3 = AAD_ResBlk(1024, 1024, 1024, c_id)
+        self.AADBlk4 = AAD_ResBlk(1024, 512, 512, c_id)
+        self.AADBlk5 = AAD_ResBlk(512, 256, 256, c_id)
+        self.AADBlk6 = AAD_ResBlk(256, 128, 128, c_id)
+        self.AADBlk7 = AAD_ResBlk(128, 64, 64, c_id)
         self.AADBlk8 = AAD_ResBlk(64, 3, 64, c_id)
 
         self.apply(weight_init)
@@ -179,3 +200,7 @@ class AEI_Net(nn.Module):
 
     def get_id(self, I):
         return self.arcface(F.interpolate(I[:, :, 19:237, 19:237], [112, 112], mode='bilinear', align_corners=True))
+
+
+
+

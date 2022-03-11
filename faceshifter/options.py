@@ -15,8 +15,8 @@ class TrainOptions(BaseOptions):
         self.parser.add_argument('--train_dataset_root_list', type=list, \
             default=[
                 '/home/compu/dataset/CelebHQ',
-                '/home/compu/dataset/kface_wild_1024',
-                '/home/compu/dataset/ffhq16k'
+                # '/home/compu/dataset/kface_wild_1024',
+                # '/home/compu/dataset/ffhq16k'
             ])
 
         # Learning rate
