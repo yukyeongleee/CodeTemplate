@@ -1,7 +1,7 @@
-from lib.loss import Loss, LossInterface
+from lib.loss_interface import Loss, LossInterface
 
 
-class FaceShifterLoss(LossInterface):
+class YourModelLoss(LossInterface):
     def get_loss_G(self, dict):
         L_G = 0.0
         

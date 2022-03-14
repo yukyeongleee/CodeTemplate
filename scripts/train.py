@@ -1,12 +1,16 @@
-import torch
-import wandb
 import os
 import sys
-from lib.options import BaseOptions
+sys.path.append("./")
+sys.path.append("../")
+sys.path.append("./submodel/")
+
+from lib.base_options import BaseOptions
 from lib.model_loader import CreateModel
 
-sys.path.append("./")
-sys.path.append("./submodel/")
+import torch
+import wandb
+from wandb import AlertLevel
+from datetime import timedelta
 
 
 def train(gpu, args): 
@@ -25,10 +29,22 @@ def train(gpu, args):
         if args.isMaster:
             # Save and print loss
             if global_step % args.loss_cycle == 0:
-                if args.use_wandb:
-                    wandb.log(model.loss_collector.loss_dict)
                 model.loss_collector.print_loss(global_step)
 
+                if args.use_wandb:
+                    wandb.log(model.loss_collector.loss_dict)
+
+                
+                    # alert
+                    G_loss = model.loss_collector.loss_dict["L_G"]
+                    if G_loss > 1000:
+                        wandb.alert(
+                            title='Loss diverges',
+                            text=f'G_Loss {G_loss} is over the acceptable threshold {1000}',
+                            level=AlertLevel.WARN,
+                            wait_duration=timedelta(minutes=5)
+                        )
+                
             # Save image
             if global_step % args.test_cycle == 0:
                 model.save_image(result, global_step)

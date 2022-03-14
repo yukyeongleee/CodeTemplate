@@ -177,9 +177,9 @@ class AADGenerator(nn.Module):
         return torch.tanh(y)
 
 
-class AEI_Net(nn.Module):
+class YourNet(nn.Module):
     def __init__(self, c_id=512):
-        super(AEI_Net, self).__init__()
+        super(YourNet, self).__init__()
         self.encoder = MLAttrEncoder()
         self.generator = AADGenerator(c_id)
 

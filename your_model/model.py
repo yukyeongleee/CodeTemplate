@@ -1,18 +1,18 @@
 import torch
-from lib import checkpoint, utils
-from lib.model import ModelInterface
-from faceshifter.loss import FaceShifterLoss
-from faceshifter.nets import AEI_Net
+from lib import utils
+from lib.model_interface import ModelInterface
+from your_model.loss import YourModelLoss
+from your_model.nets import YourNet
 from submodel.discriminator import StarGANv2Discriminator # with BCE
-import time
 
-class FaceShifter(ModelInterface):
+
+class YourModel(ModelInterface):
     def initialize_models(self):
-        self.G = AEI_Net().cuda(self.gpu).train()
+        self.G = YourNet().cuda(self.gpu).train()
         self.D = StarGANv2Discriminator().cuda(self.gpu).train()
 
     def set_loss_collector(self):
-        self._loss_collector = FaceShifterLoss(self.args)
+        self._loss_collector = YourModelLoss(self.args)
 
     def train_step(self):
         # load batch

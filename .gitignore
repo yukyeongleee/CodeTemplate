@@ -1,13 +1,11 @@
 train_result/
 wandb/
-*.pyc
-*__pycache__
-hififace/BFM/*
-ptnn/*
-!ptnn\.gitkeep
 *.zip
-submodel/BFM/
-samples/*.*g
+
+# to remain gitkeep
+!ptnn/
+ptnn/*
+!ptnn/.gitkeep
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
