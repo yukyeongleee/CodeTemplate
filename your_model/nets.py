@@ -3,6 +3,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from submodel import arcface
 
+
 def weight_init(m):
     if isinstance(m, nn.Linear):
         m.weight.data.normal_(0, 0.001)
@@ -178,14 +179,14 @@ class AADGenerator(nn.Module):
 
 
 class YourNet(nn.Module):
-    def __init__(self, c_id=512):
+    def __init__(self, c_id=512, arcface_path="./ptnn/arcface.pth"):
         super(YourNet, self).__init__()
         self.encoder = MLAttrEncoder()
         self.generator = AADGenerator(c_id)
 
         # face recognition model: arcface
         self.arcface = arcface.Backbone(50, 0.6, 'ir_se').eval()
-        self.arcface.load_state_dict(torch.load('ptnn/arcface.pth', map_location="cuda"), strict=False)
+        self.arcface.load_state_dict(torch.load(arcface_path, map_location="cuda"), strict=False)
         for param in self.arcface.parameters():
             param.requires_grad = False
 

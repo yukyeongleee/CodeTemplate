@@ -1,21 +1,13 @@
-
-
-
-
 # Usage
 
 ## train
 
 ```
-python scripts/train.py --model faceshifter --run_id simple_test
+git clone https://github.com/innerverz/CodeTemplate.git
 
-# if you want to use multi GPUs, add "--use_mGPU"
-python scripts/train.py --model faceshifter --run_id simple_test --use_mGPU
+cd CodeTemplate
 
-# if you want to use wandb, add "--use_wandb"
-python scripts/train.py --model faceshifter --run_id simple_test --use_mGPU --use_wandb
+python scripts/train.py {run_id}
 
-# if you want to load a checkpoint and retrain it, use "--ckpt_id"
-python scripts/train.py --model faceshifter --run_id simple_test --use_mGPU --use_wandb --ckpt_id={PATH/TO/CKPT}
- 
+# ex) python scripts/train.py first_try
 ```

@@ -3,7 +3,6 @@ import torch
 from torch.utils.data import DataLoader
 from lib.dataset import FaceDatasetTrain, FaceDatasetValid
 from lib import utils, checkpoint
-import time
 
 class ModelInterface(metaclass=abc.ABCMeta):
     """
@@ -78,12 +77,12 @@ class ModelInterface(metaclass=abc.ABCMeta):
         self.G = torch.nn.parallel.DistributedDataParallel(self.G, device_ids=[self.gpu], broadcast_buffers=False, find_unused_parameters=True).module
         self.D = torch.nn.parallel.DistributedDataParallel(self.D, device_ids=[self.gpu]).module
 
-    def load_checkpoint(self, step=-1):
+    def load_checkpoint(self):
         """
         Load pretrained parameters from checkpoint to the initialized models.
         """
-        checkpoint.load_checkpoint(self.args, self.G, self.opt_G, name='G', global_step=step)
-        checkpoint.load_checkpoint(self.args, self.D, self.opt_D, name='D', global_step=step)
+        checkpoint.load_checkpoint(self.args, self.G, self.opt_G)
+        checkpoint.load_checkpoint(self.args, self.D, self.opt_D)
 
     def set_optimizers(self):
         self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.args.lr_G, betas=(self.args.beta1, self.args.beta2))

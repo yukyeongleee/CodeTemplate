@@ -4,7 +4,7 @@ sys.path.append("./")
 sys.path.append("../")
 sys.path.append("./submodel/")
 
-from lib.base_options import BaseOptions
+from lib.config import Config
 from lib.model_loader import CreateModel
 
 import torch
@@ -15,6 +15,10 @@ from datetime import timedelta
 
 def train(gpu, args): 
     torch.cuda.set_device(gpu)
+
+    # convert dictionary to class
+    args = Config(args)
+
     model, args, step = CreateModel(gpu, args)
 
     # Initialize wandb to gather and display loss on dashboard 
@@ -34,13 +38,12 @@ def train(gpu, args):
                 if args.use_wandb:
                     wandb.log(model.loss_collector.loss_dict)
 
-                
                     # alert
                     G_loss = model.loss_collector.loss_dict["L_G"]
-                    if G_loss > 1000:
+                    if G_loss > args.wandb_alert_thres:
                         wandb.alert(
                             title='Loss diverges',
-                            text=f'G_Loss {G_loss} is over the acceptable threshold {1000}',
+                            text=f'G_Loss {G_loss} is over the acceptable threshold {args.wandb_alert_thres}',
                             level=AlertLevel.WARN,
                             wait_duration=timedelta(minutes=5)
                         )
@@ -52,6 +55,7 @@ def train(gpu, args):
                 if args.valid_dataset_root:
                     model.validation(global_step) 
 
+
             # Save checkpoint parameters 
             if global_step % args.ckpt_cycle == 0:
                 model.save_checkpoint(global_step)
@@ -60,13 +64,17 @@ def train(gpu, args):
 
 
 if __name__ == "__main__":
-    args = BaseOptions().parse()
-    os.makedirs(args.save_root, exist_ok=True)
+
+    # checkpoints and images will be saved in the ./train_result
+    os.makedirs("./train_result", exist_ok=True)
+    args = Config.from_yaml("your_model/configs.yaml")
+    args.gpu_num = torch.cuda.device_count()
+    args.run_id = sys.argv[1]
 
     # Set up multi-GPU training
     if args.use_mGPU:  
-        torch.multiprocessing.spawn(train, nprocs=args.gpu_num, args=(args, ))
+        torch.multiprocessing.spawn(train, nprocs=args.gpu_num, args=(args.__dict__, ))
 
     # Set up single GPU training
     else:
-        train(args.gpu_id, args)
+        train(gpu=0, args=args)

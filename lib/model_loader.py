@@ -1,11 +1,8 @@
 import numpy as np
-import torch
+from your_model.model import YourModel
 
 def CreateModel(gpu, args):
 
-    from your_model.model import YourModel
-    from your_model.options import TrainOptions
-    args = TrainOptions().parse()
     model = YourModel(args, gpu)
     args.isMaster = gpu == 0
     model.RandomGenerator = np.random.RandomState(42)

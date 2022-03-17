@@ -46,17 +46,6 @@ class AdaIN(nn.Module):
         return (1 + gamma) * self.norm(x) + beta
 
 
-def conv3x3(in_planes, out_planes, stride=1, groups=1, dilation=1):
-    """3x3 convolution with padding"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=dilation, groups=groups, bias=False, dilation=dilation)
-
-
-def conv1x1(in_planes, out_planes, stride=1, bias=False):
-    """1x1 convolution"""
-    return nn.Conv2d(in_planes, out_planes, kernel_size=1, stride=stride, bias=bias)
-
-
 def weight_init(m):
     if isinstance(m, nn.Linear):
         m.weight.data.normal_(0, 0.001)
@@ -84,11 +73,11 @@ def setup_ddp(gpu, ngpus_per_node):
 
 
 def save_image(args, global_step, dir, images):
-    dir_path = f'{args.save_root}/{args.run_id}/{dir}'
+    dir_path = f'train_result/{args.run_id}/{dir}'
     os.makedirs(dir_path, exist_ok=True)
     
     sample_image = make_grid_image(images).transpose([1,2,0]) * 255
-    cv2.imwrite(dir_path + f'/e{global_step}.jpg', sample_image[:,:,::-1])
+    cv2.imwrite(f'{dir_path}/{str(global_step).zfill(8)}.jpg', sample_image[:,:,::-1])
 
 
 def make_grid_image(images_list):

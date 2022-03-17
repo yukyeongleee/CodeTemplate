@@ -8,7 +8,7 @@ from submodel.discriminator import StarGANv2Discriminator # with BCE
 
 class YourModel(ModelInterface):
     def initialize_models(self):
-        self.G = YourNet().cuda(self.gpu).train()
+        self.G = YourNet(arcface_path=self.args.arcface_path).cuda(self.gpu).train()
         self.D = StarGANv2Discriminator().cuda(self.gpu).train()
 
     def set_loss_collector(self):
