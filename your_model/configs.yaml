@@ -2,10 +2,10 @@
 model_id: YourModel
 
 # multi-GPUs
-use_mGPU: True
+use_mGPU: False
 
 # wandb
-use_wandb: True
+use_wandb: False
 wandb_alert_thres: 1000
 
 # dataset
@@ -40,7 +40,8 @@ test_cycle: 1000
 ckpt_cycle: 10000
 
 # ckpt path
-ckpt_path: None
+G_ckpt_path: None
+D_ckpt_path: None
 
 ## Pretrained models paths
 arcface_path: ptnn/arcface.pth

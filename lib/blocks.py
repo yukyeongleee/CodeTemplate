@@ -1,7 +1,45 @@
 import torch
 import torch.nn as nn
 
-from lib.utils import set_norm_layer, set_activate_layer, AdaIN
+
+def set_norm_layer(norm_type, norm_dim):
+    if norm_type == 'bn':
+        norm = nn.BatchNorm2d(norm_dim)
+    elif norm_type == 'in':
+        norm = nn.InstanceNorm2d(norm_dim)
+    elif norm_type == 'none':
+        norm = None
+    else:
+        assert 0, "Unsupported normalization: {}".format(norm)
+    return norm
+
+def set_activate_layer(types):
+    # initialize activation
+    if types == 'relu':
+        activation = nn.ReLU()
+    elif types == 'lrelu':
+        activation = nn.LeakyReLU(0.2)
+    elif types == 'tanh':
+        activation = nn.Tanh()
+    elif types == 'sig':
+        activation = nn.Sigmoid()
+    elif types == 'none':
+        activation = None
+    else:
+        assert 0, f"Unsupported activation: {types}"
+    return activation
+
+class AdaIN(nn.Module):
+    def __init__(self, style_dim, num_features):
+        super().__init__()
+        self.norm = nn.InstanceNorm2d(num_features, affine=False)
+        self.fc = nn.Linear(style_dim, num_features*2)
+
+    def forward(self, x, s):
+        h = self.fc(s)
+        h = h.view(h.size(0), h.size(1), 1, 1)
+        gamma, beta = torch.chunk(h, chunks=2, dim=1)
+        return (1 + gamma) * self.norm(x) + beta
 
 class Interpolate(nn.Module):
     def __init__(self, scale_factor, mode="bilinear"):

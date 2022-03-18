@@ -1,7 +1,7 @@
 import abc
 import torch
 from torch.utils.data import DataLoader
-from lib.dataset import FaceDatasetTrain, FaceDatasetValid
+from lib.dataset import DoubleFaceDatasetTrain, DoubleFaceDatasetValid
 from lib import utils, checkpoint
 
 class ModelInterface(metaclass=abc.ABCMeta):
@@ -36,9 +36,9 @@ class ModelInterface(metaclass=abc.ABCMeta):
         """
         Initialize dataset using the dataset paths specified in the command line arguments.
         """
-        self.train_dataset = FaceDatasetTrain(self.args.train_dataset_root_list, self.args.isMaster, same_prob=self.args.same_prob)
+        self.train_dataset = DoubleFaceDatasetTrain(self.args.train_dataset_root_list, self.args.isMaster, same_prob=self.args.same_prob)
         if self.args.valid_dataset_root:
-            self.valid_dataset = FaceDatasetValid(self.args.valid_dataset_root, self.args.isMaster)
+            self.valid_dataset = DoubleFaceDatasetValid(self.args.valid_dataset_root, self.args.isMaster)
 
     def set_data_iterator(self):
         """
@@ -81,8 +81,9 @@ class ModelInterface(metaclass=abc.ABCMeta):
         """
         Load pretrained parameters from checkpoint to the initialized models.
         """
-        checkpoint.load_checkpoint(self.args, self.G, self.opt_G)
-        checkpoint.load_checkpoint(self.args, self.D, self.opt_D)
+        step = checkpoint.load_checkpoint(self.args.isMaster, self.args.G_ckpt_path, self.G, self.opt_G)
+        step = checkpoint.load_checkpoint(self.args.isMaster, self.args.D_ckpt_path, self.D, self.opt_D)
+        return step
 
     def set_optimizers(self):
         self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.args.lr_G, betas=(self.args.beta1, self.args.beta2))

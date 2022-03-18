@@ -28,7 +28,7 @@ def train(gpu, args):
     # Training loop
     global_step = step if step else 0
     while global_step < args.max_step:
-        result = model.train_step()
+        result = model.train_step(global_step)
 
         if args.isMaster:
             # Save and print loss

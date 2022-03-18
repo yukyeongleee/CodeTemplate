@@ -14,7 +14,7 @@ class YourModel(ModelInterface):
     def set_loss_collector(self):
         self._loss_collector = YourModelLoss(self.args)
 
-    def train_step(self):
+    def train_step(self, step):
         # load batch
         I_source, I_target, same_person = self.load_next_batch()
 

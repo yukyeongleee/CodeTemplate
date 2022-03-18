@@ -2,20 +2,21 @@ import torch
 import os
 
         
-def load_checkpoint(args, model, optimizer):
+def load_checkpoint(isMaster, ckpt_path, model, optimizer):
     try:
-        ckpt_dict = torch.load(args.ckpt_path, map_location=torch.device('cuda'))
+        ckpt_dict = torch.load(ckpt_path, map_location=torch.device('cuda'))
         model.load_state_dict(ckpt_dict['model'], strict=False)
         optimizer.load_state_dict(ckpt_dict['optimizer'])
-        return ckpt_dict['step']
-    except:
-        if args.isMaster:
-            if args.ckpt_path == "None":
-                print("start training from scratch")
-            else:
-                print(f"Failed to load checkpoint; given path is {args.ckpt_path}")
-        return 0
+        step = ckpt_dict['step']
+        
+        if isMaster:
+            print(f"Pretrained parameters are succesively loaded from {os.path.split(ckpt_path)[1]}")
 
+        return step
+    except:
+        if isMaster:
+            print(f"Failed to load checkpoint; start training from scratch")
+        return 0
 
 def save_checkpoint(args, model, optimizer, name, global_step):
     ckpt_dict = {}

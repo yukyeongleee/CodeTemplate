@@ -10,7 +10,7 @@ class YourModelLoss(LossInterface):
             L_adv = Loss.get_BCE_loss(dict["d_adv"], True)
             L_G += self.args.W_adv * L_adv
             self.loss_dict["L_adv"] = round(L_adv.item(), 4)
-        
+
         # Id loss
         if self.args.W_id:
             L_id = Loss.get_id_loss(dict["id_source"], dict["id_swapped"])
@@ -22,7 +22,7 @@ class YourModelLoss(LossInterface):
             L_attr = Loss.get_attr_loss(dict["attr_target"], dict["attr_swapped"], self.args.batch_per_gpu)
             L_G += self.args.W_attr * L_attr
             self.loss_dict["L_attr"] = round(L_attr.item(), 4)
-
+            
         # Reconstruction loss
         if self.args.W_recon:
             L_recon = Loss.get_L2_loss_with_same_person(dict["I_target"], dict["I_swapped"], dict["same_person"], self.args.batch_per_gpu)
@@ -35,13 +35,14 @@ class YourModelLoss(LossInterface):
             L_G += self.args.W_cycle * L_cycle
             self.loss_dict["L_cycle"] = round(L_cycle.item(), 4)
 
+
         self.loss_dict["L_G"] = round(L_G.item(), 4)
         return L_G
 
     def get_loss_D(self, dict):
         L_real = Loss.get_BCE_loss(dict["d_real"], True)
         L_fake = Loss.get_BCE_loss(dict["d_fake"], False)
-        L_reg = Loss.get_r1_reg(L_real, dict["I_source"])
+        L_reg = Loss.get_r1_reg(dict["d_real"], dict["I_source"])
         L_D = L_real + L_fake + L_reg
         
         self.loss_dict["L_real"] = round(L_real.mean().item(), 4)
