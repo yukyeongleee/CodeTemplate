@@ -67,9 +67,13 @@ if __name__ == "__main__":
 
     # checkpoints and images will be saved in the ./train_result
     os.makedirs("./train_result", exist_ok=True)
-    args = Config.from_yaml("your_model/configs.yaml")
-    args.gpu_num = torch.cuda.device_count()
+
+    # 
+    config_path = "your_model/configs.yaml"
+    args = Config.from_yaml(config_path)
     args.run_id = sys.argv[1]
+    args.save_yaml(config_path)
+    args.gpu_num = torch.cuda.device_count()
 
     # Set up multi-GPU training
     if args.use_mGPU:  

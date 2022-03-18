@@ -1,5 +1,6 @@
+from importlib.resources import read_text
 import yaml
-
+import shutil
 
 class Config(object):
     def __init__(self, dict_config=None):
@@ -7,9 +8,12 @@ class Config(object):
         self.set_attribute(dict_config)
 
     @staticmethod
-    def from_yaml(path):
-        with open(path, 'r') as stream:
+    def from_yaml(read_path):
+        with open(read_path, 'r') as stream:
             return Config(yaml.load(stream, Loader=yaml.FullLoader))
+
+    def save_yaml(self, read_path):
+        shutil.copy(read_path, f"train_result/config_{self.run_id}.yaml")
 
     @staticmethod
     def from_dict(dict):
