@@ -52,7 +52,7 @@ def train(gpu, args):
             if global_step % args.test_cycle == 0:
                 save_image(model.args, global_step, "train_imgs", train_inter_images)
 
-                if args.valid_dataset_root:
+                if args.use_validation:
                     valid_inter_images = model.validation(global_step) 
                     save_image(model.args, global_step, "valid_imgs", valid_inter_images)
 
