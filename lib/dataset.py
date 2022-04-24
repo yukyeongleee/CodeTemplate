@@ -64,7 +64,7 @@ class SingleFaceDatasetValid(Dataset):
 
 
 
-class DoubleFaceDatasetTrain(Dataset):
+class PairedFaceDatasetTrain(Dataset):
     def __init__(self, dataset_root_list, isMaster, same_prob=0.2):
         self.same_prob = same_prob
         self.image_path_list, self.image_num_list = utils.get_all_images(dataset_root_list)
@@ -101,7 +101,7 @@ class DoubleFaceDatasetTrain(Dataset):
         return sum(self.image_num_list)
 
 
-class DoubleFaceDatasetValid(Dataset):
+class PairedFaceDatasetValid(Dataset):
     def __init__(self, valid_data_dir, isMaster):
         
         self.source_path_list = sorted(glob.glob(f"{valid_data_dir}/source/*.*g"))

@@ -8,6 +8,7 @@ import glob
 def get_all_images(dataset_root_list):
     image_path_list = []
     image_num_list = []
+
     for dataset_root in dataset_root_list:
         imgpaths_in_root = glob.glob(f'{dataset_root}/*.*g')
 
@@ -41,7 +42,6 @@ def update_net(optimizer, loss):
     loss.backward()   
     optimizer.step()  
 
-
 def setup_ddp(gpu, ngpus_per_node):
     torch.distributed.init_process_group(
             backend='nccl',
@@ -49,24 +49,22 @@ def setup_ddp(gpu, ngpus_per_node):
             world_size=ngpus_per_node,
             rank=gpu)
 
-
 def save_image(args, global_step, dir, images):
     dir_path = f'train_result/{args.run_id}/{dir}'
     os.makedirs(dir_path, exist_ok=True)
     
-    sample_image = make_grid_image(images).transpose([1,2,0]) * 255
+    sample_image = make_grid_image(images).detach().cpu().numpy().transpose([1,2,0]) * 255
     cv2.imwrite(f'{dir_path}/{str(global_step).zfill(8)}.jpg', sample_image[:,:,::-1])
-
 
 def make_grid_image(images_list):
     grid_rows = []
 
     for images in images_list:
         images = images[:8] # Drop images if there are more than 8 images in the list
-        grid_row = torchvision.utils.make_grid(images.detach().cpu(), nrow=images.shape[0]) * 0.5 + 0.5
+        grid_row = torchvision.utils.make_grid(images, nrow=images.shape[0]) * 0.5 + 0.5
         grid_rows.append(grid_row)
 
-    grid = torch.cat(grid_rows, dim=1).numpy()
+    grid = torch.cat(grid_rows, dim=1)
     return grid
 
 def requires_grad(model, flag=True):

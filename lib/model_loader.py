@@ -7,18 +7,20 @@ def CreateModel(gpu, args):
     args.isMaster = gpu == 0
     model.RandomGenerator = np.random.RandomState(42)
     model.initialize_models()
-    model.set_dataset()
+    model.set_optimizers()
 
     if args.use_mGPU:
         model.set_multi_GPU()
 
+    if args.load_ckpt:
+        model.load_checkpoint()
+
+    model.set_dataset()
     model.set_data_iterator()
     model.set_validation()
-    model.set_optimizers()
-    step = model.load_checkpoint()
     model.set_loss_collector()
 
     if args.isMaster:
-        print(f'model {args.model_id} has created')
+        print(f'Model {args.model_id} has successively created')
         
-    return model, args, step
+    return model, args

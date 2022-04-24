@@ -2,18 +2,23 @@
 model_id: YourModel
 
 # multi-GPUs
-use_mGPU: False
+use_mGPU: True
+
+# validation
+use_validation: True
 
 # wandb
-use_wandb: False
+use_wandb: True
 wandb_alert_thres: 1000
 
-# dataset
+# root
 train_dataset_root_list: [
-                '/home/compu/dataset/CelebHQ',
-                '/home/compu/dataset/ffhq16k'
+                "/media/deep3090/새 볼륨/celeba_hq",
+                # '/home/compu/dataset/CelebHQ',
+                # '/home/compu/dataset/ffhq16k'
             ]
 valid_dataset_root: assets/valid
+save_root: train_result
 
 # learning rate
 lr_G: 0.0001
@@ -31,7 +36,7 @@ W_attr: 10
 
 # hyperparameters
 same_prob: 0.2
-batch_per_gpu: 8
+batch_per_gpu: 4
 max_step: 400000
 
 # log cycle
@@ -40,8 +45,12 @@ test_cycle: 1000
 ckpt_cycle: 10000
 
 # ckpt path
-G_ckpt_path: None
-D_ckpt_path: None
+# blank is None, but None is "None"
+load_ckpt: False
+ckpt_id: test
+ckpt_step: 0
+# ckpt_id: run0424
+# ckpt_step: 30000
 
 ## Pretrained models paths
 arcface_path: ptnn/arcface.pth

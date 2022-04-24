@@ -76,12 +76,6 @@ class Loss:
     def get_L2_loss(cls, a, b):
         return cls.L2(a, b)
 
-    def get_L1_loss_with_same_person(a, b, same_person, batch_per_gpu):
-        return torch.sum(torch.mean(torch.abs(a - b).reshape(batch_per_gpu, -1), dim=1) * same_person) / (same_person.sum() + 1e-6)
-
-    def get_L2_loss_with_same_person(a, b, same_person, batch_per_gpu):
-        return torch.sum(0.5 * torch.mean(torch.pow(a - b, 2).reshape(batch_per_gpu, -1), dim=1) * same_person) / (same_person.sum() + 1e-6)
-
     def get_attr_loss(a, b, batch_size):
         L_attr = 0
         for i in range(len(a)):

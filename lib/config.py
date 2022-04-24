@@ -12,8 +12,11 @@ class Config(object):
         with open(read_path, 'r') as stream:
             return Config(yaml.load(stream, Loader=yaml.FullLoader))
 
-    def save_yaml(self, read_path):
-        shutil.copy(read_path, f"train_result/config_{self.run_id}.yaml")
+    def save_yaml(self):
+        with open(f'train_result/{self.run_id}/config_{self.run_id}.yaml', 'w') as f:
+            yaml.dump(self.__dict__, f)
+
+        # shutil.copy(read_path, f"train_result/{self.run_id}/config_{self.run_id}.yaml")
 
     @staticmethod
     def from_dict(dict):

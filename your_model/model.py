@@ -14,9 +14,10 @@ class YourModel(ModelInterface):
     def set_loss_collector(self):
         self._loss_collector = YourModelLoss(self.args)
 
-    def train_step(self, step):
+    def train_step(self, global_step):
         # load batch
         I_source, I_target, same_person = self.load_next_batch()
+        same_person = same_person.reshape(-1, 1, 1, 1).repeat(1, 3, 256, 256)
 
         self.dict = {
             "I_source": I_source,
@@ -64,10 +65,7 @@ class YourModel(ModelInterface):
     def validation(self, step):
         with torch.no_grad():
             Y = self.G(self.valid_source, self.valid_target)[0]
-        utils.save_image(self.args, step, "valid_imgs", [self.valid_source, self.valid_target, Y])
-
-    def save_image(self, result, step):
-        utils.save_image(self.args, step, "imgs", result)
+        return [self.valid_source, self.valid_target, Y]
 
     @property
     def loss_collector(self):

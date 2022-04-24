@@ -25,7 +25,7 @@ class YourModelLoss(LossInterface):
             
         # Reconstruction loss
         if self.args.W_recon:
-            L_recon = Loss.get_L2_loss_with_same_person(dict["I_target"], dict["I_swapped"], dict["same_person"], self.args.batch_per_gpu)
+            L_recon = Loss.get_L2_loss(dict["I_target"]*dict["same_person"], dict["I_swapped"]*dict["same_person"])
             L_G += self.args.W_recon * L_recon
             self.loss_dict["L_recon"] = round(L_recon.item(), 4)
         

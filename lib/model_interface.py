@@ -1,7 +1,7 @@
 import abc
 import torch
 from torch.utils.data import DataLoader
-from lib.dataset import DoubleFaceDatasetTrain, DoubleFaceDatasetValid
+from lib.dataset import PairedFaceDatasetTrain, PairedFaceDatasetValid
 from lib import utils, checkpoint
 
 class ModelInterface(metaclass=abc.ABCMeta):
@@ -36,9 +36,9 @@ class ModelInterface(metaclass=abc.ABCMeta):
         """
         Initialize dataset using the dataset paths specified in the command line arguments.
         """
-        self.train_dataset = DoubleFaceDatasetTrain(self.args.train_dataset_root_list, self.args.isMaster, same_prob=self.args.same_prob)
+        self.train_dataset = PairedFaceDatasetTrain(self.args.train_dataset_root_list, self.args.isMaster, same_prob=self.args.same_prob)
         if self.args.valid_dataset_root:
-            self.valid_dataset = DoubleFaceDatasetValid(self.args.valid_dataset_root, self.args.isMaster)
+            self.valid_dataset = PairedFaceDatasetValid(self.args.valid_dataset_root, self.args.isMaster)
 
     def set_data_iterator(self):
         """
@@ -77,13 +77,28 @@ class ModelInterface(metaclass=abc.ABCMeta):
         self.G = torch.nn.parallel.DistributedDataParallel(self.G, device_ids=[self.gpu], broadcast_buffers=False, find_unused_parameters=True).module
         self.D = torch.nn.parallel.DistributedDataParallel(self.D, device_ids=[self.gpu]).module
 
+
+    def save_checkpoint(self, global_step):
+        """
+        Save model and optimizer parameters.
+        """
+        checkpoint.save_checkpoint(self.args, self.G, self.opt_G, name='G', global_step=global_step)
+        checkpoint.save_checkpoint(self.args, self.D, self.opt_D, name='D', global_step=global_step)
+        
+        if self.args.isMaster:
+            print(f"\nPretrained parameters are succesively saved in {self.args.save_root}/{self.args.run_id}/ckpt/\n")
+    
     def load_checkpoint(self):
         """
         Load pretrained parameters from checkpoint to the initialized models.
         """
-        step = checkpoint.load_checkpoint(self.args.isMaster, self.args.G_ckpt_path, self.G, self.opt_G)
-        step = checkpoint.load_checkpoint(self.args.isMaster, self.args.D_ckpt_path, self.D, self.opt_D)
-        return step
+
+        self.args.global_step = \
+        checkpoint.load_checkpoint(self.args, self.G, self.opt_G, "G")
+        checkpoint.load_checkpoint(self.args, self.D, self.opt_D, "D")
+
+        if self.args.isMaster:
+            print(f"Pretrained parameters are succesively loaded from {self.args.save_root}/{self.args.ckpt_id}/ckpt/")
 
     def set_optimizers(self):
         self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.args.lr_G, betas=(self.args.beta1, self.args.beta2))
@@ -122,19 +137,3 @@ class ModelInterface(metaclass=abc.ABCMeta):
         This method includes util.save_image and returns nothing.
         """
         pass
-
-    @abc.abstractmethod
-    def save_image(self):
-        """
-        Batch of images from train_step is organized into a table and saved as an image.
-        """
-        pass
-
-    def save_checkpoint(self, step):
-        """
-        Save model and optimizer parameters.
-        """
-        checkpoint.save_checkpoint(self.args, self.G, self.opt_G, name='G', global_step=step)
-        checkpoint.save_checkpoint(self.args, self.D, self.opt_D, name='D', global_step=step)
-        pass   
-    
