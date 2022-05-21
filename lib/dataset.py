@@ -1,4 +1,3 @@
-import os
 import glob
 from PIL import Image
 import random
@@ -63,12 +62,11 @@ class SingleFaceDatasetValid(Dataset):
         return self.num
 
 
-
 class PairedFaceDatasetTrain(Dataset):
     def __init__(self, dataset_root_list, isMaster, same_prob=0.2):
         self.same_prob = same_prob
         self.image_path_list, self.image_num_list = utils.get_all_images(dataset_root_list)
-
+        
         self.transforms = transforms.Compose([
             transforms.Resize((256,256)),
             transforms.RandomHorizontalFlip(p=0.5),

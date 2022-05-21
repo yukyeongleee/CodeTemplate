@@ -1,6 +1,4 @@
-from importlib.resources import read_text
 import yaml
-import shutil
 
 class Config(object):
     def __init__(self, dict_config=None):
@@ -15,8 +13,6 @@ class Config(object):
     def save_yaml(self):
         with open(f'train_result/{self.run_id}/config_{self.run_id}.yaml', 'w') as f:
             yaml.dump(self.__dict__, f)
-
-        # shutil.copy(read_path, f"train_result/{self.run_id}/config_{self.run_id}.yaml")
 
     @staticmethod
     def from_dict(dict):
@@ -37,10 +33,7 @@ class Config(object):
             return
 
         for key in dict_config.keys():
-            if isinstance(dict_config[key], dict):
-                self.__dict__[key] = Config(dict_config[key])
-            else:
-                self.__dict__[key] = dict_config[key]
+            self.__dict__[key] = dict_config[key]
 
     def keys(self):
         return self.__dict__.keys()

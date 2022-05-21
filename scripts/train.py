@@ -1,25 +1,20 @@
 import os
 import sys
 sys.path.append("./")
-sys.path.append("../")
-sys.path.append("./submodel/")
-
+sys.path.append("./packages")
 from lib.utils import save_image
 from lib.config import Config
-from lib.model_loader import CreateModel
-
+from MyModel.model import MyModel
 import torch
 import wandb
-from datetime import timedelta
 
 
 def train(gpu, args): 
     torch.cuda.set_device(gpu)
 
     # convert dictionary to class
-    args = Config(args)
-
-    model, args = CreateModel(gpu, args)
+    args = Config(args)    
+    model = MyModel(args, gpu)
 
     # Initialize wandb to gather and display loss on dashboard 
     if args.isMaster and args.use_wandb:
@@ -28,7 +23,9 @@ def train(gpu, args):
     # Training loop
     global_step = args.global_step if args.load_ckpt else 0
     while global_step < args.max_step:
-        train_inter_images = model.train_step(global_step)
+
+        # go one step
+        model.go_step(global_step)
 
         if args.isMaster:
             # Save and print loss
@@ -37,24 +34,14 @@ def train(gpu, args):
 
                 if args.use_wandb:
                     wandb.log(model.loss_collector.loss_dict)
-
-                    # alert
-                    G_loss = model.loss_collector.loss_dict["L_G"]
-                    if G_loss > args.wandb_alert_thres:
-                        wandb.alert(
-                            title='Loss diverges',
-                            text=f'G_Loss {G_loss} is over the acceptable threshold {args.wandb_alert_thres}',
-                            level=wandb.AlertLevel.WARN,
-                            wait_duration=timedelta(minutes=5)
-                        )
                 
             # Save image
             if global_step % args.test_cycle == 0:
-                save_image(model.args, global_step, "train_imgs", train_inter_images)
+                save_image(model.args, global_step, "train_imgs", model.train_images)
 
                 if args.use_validation:
-                    valid_inter_images = model.validation(global_step) 
-                    save_image(model.args, global_step, "valid_imgs", valid_inter_images)
+                    model.do_validation(global_step) 
+                    save_image(model.args, global_step, "valid_imgs", model.valid_images)
 
             # Save checkpoint parameters 
             if global_step % args.ckpt_cycle == 0:

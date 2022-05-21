@@ -1,13 +1,13 @@
 from lib.loss_interface import Loss, LossInterface
+import torch.nn.functional as F
 
-
-class YourModelLoss(LossInterface):
+class MyModelLoss(LossInterface):
     def get_loss_G(self, dict):
         L_G = 0.0
         
         # Adversarial loss
         if self.args.W_adv:
-            L_adv = Loss.get_BCE_loss(dict["d_adv"], True)
+            L_adv = (-dict["d_adv"]).mean()
             L_G += self.args.W_adv * L_adv
             self.loss_dict["L_adv"] = round(L_adv.item(), 4)
 
@@ -16,16 +16,10 @@ class YourModelLoss(LossInterface):
             L_id = Loss.get_id_loss(dict["id_source"], dict["id_swapped"])
             L_G += self.args.W_id * L_id
             self.loss_dict["L_id"] = round(L_id.item(), 4)
-
-        # Attribute loss
-        if self.args.W_attr:
-            L_attr = Loss.get_attr_loss(dict["attr_target"], dict["attr_swapped"], self.args.batch_per_gpu)
-            L_G += self.args.W_attr * L_attr
-            self.loss_dict["L_attr"] = round(L_attr.item(), 4)
             
         # Reconstruction loss
         if self.args.W_recon:
-            L_recon = Loss.get_L2_loss(dict["I_target"]*dict["same_person"], dict["I_swapped"]*dict["same_person"])
+            L_recon = Loss.get_L1_loss(dict["I_target"]*dict["same_person"], dict["I_swapped"]*dict["same_person"])
             L_G += self.args.W_recon * L_recon
             self.loss_dict["L_recon"] = round(L_recon.item(), 4)
         
@@ -35,15 +29,25 @@ class YourModelLoss(LossInterface):
             L_G += self.args.W_cycle * L_cycle
             self.loss_dict["L_cycle"] = round(L_cycle.item(), 4)
 
+        # feat loss
+        if self.args.W_feat:
+            L_feat = Loss.get_L1_loss(dict["feat_fake"]["3"], dict["feat_real"]["3"])
+            L_G += self.args.W_feat * L_feat
+            self.loss_dict["L_feat"] = round(L_feat.item(), 4)
+            
+        # LPIPS loss
+        if self.args.W_lpips:
+            L_lpips = Loss.get_lpips_loss(dict["I_swapped"], dict["I_target"])
+            L_G += self.args.W_lpips * L_lpips
+            self.loss_dict["L_lpips"] = round(L_lpips.item(), 4)
 
         self.loss_dict["L_G"] = round(L_G.item(), 4)
         return L_G
 
     def get_loss_D(self, dict):
-        L_real = Loss.get_BCE_loss(dict["d_real"], True)
-        L_fake = Loss.get_BCE_loss(dict["d_fake"], False)
-        L_reg = Loss.get_r1_reg(dict["d_real"], dict["I_source"])
-        L_D = L_real + L_fake + L_reg
+        L_real = (F.relu(1 - dict["d_real"])).mean()
+        L_fake = (F.relu(1 + dict["d_fake"])).mean()
+        L_D = L_real + L_fake
         
         self.loss_dict["L_real"] = round(L_real.mean().item(), 4)
         self.loss_dict["L_fake"] = round(L_fake.mean().item(), 4)

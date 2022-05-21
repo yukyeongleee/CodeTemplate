@@ -3,9 +3,9 @@ wandb/
 *.zip
 
 # to remain gitkeep
-!ptnn/
-ptnn/*
-!ptnn/.gitkeep
+!packages/
+packages/*
+!packages/.gitkeep
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

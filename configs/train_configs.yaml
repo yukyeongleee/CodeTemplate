@@ -1,11 +1,12 @@
 # model 
-model_id: YourModel
+model_id: MyModel
 
 # multi-GPUs
 use_mGPU: True
 
 # validation
 use_validation: True
+valid_dataset_root: ./assets/k-celeb
 
 # wandb
 use_wandb: True
@@ -13,11 +14,10 @@ wandb_alert_thres: 1000
 
 # root
 train_dataset_root_list: [
-                "/media/deep3090/새 볼륨/celeba_hq",
-                # '/home/compu/dataset/CelebHQ',
-                # '/home/compu/dataset/ffhq16k'
+                '../dataset/CelebHQ',
+                '../dataset/ffhq16k'
             ]
-valid_dataset_root: assets/valid
+
 save_root: train_result
 
 # learning rate
@@ -30,13 +30,14 @@ beta2: 0.999
 W_adv: 1
 W_id: 5
 W_recon: 10
-W_cycle: 0
-W_lpips: 0
-W_attr: 10
+W_cycle: 10
+W_lpips: 10
+W_attr: 20
+W_feat: 10
 
 # hyperparameters
 same_prob: 0.2
-batch_per_gpu: 4
+batch_per_gpu: 2
 max_step: 400000
 
 # log cycle
@@ -45,12 +46,9 @@ test_cycle: 1000
 ckpt_cycle: 10000
 
 # ckpt path
-# blank is None, but None is "None"
+# load checkpoints from ./train_result/{ckpt_id}/ckpt/G_{ckpt_step}.pt
+# if ckpt_id is empty, load G_latest.pt and D_latest.pt
+# Note that an empty space is None, but None is "None"
 load_ckpt: False
-ckpt_id: test
-ckpt_step: 0
-# ckpt_id: run0424
-# ckpt_step: 30000
-
-## Pretrained models paths
-arcface_path: ptnn/arcface.pth
+ckpt_id: 
+ckpt_step:

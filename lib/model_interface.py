@@ -3,6 +3,7 @@ import torch
 from torch.utils.data import DataLoader
 from lib.dataset import PairedFaceDatasetTrain, PairedFaceDatasetValid
 from lib import utils, checkpoint
+import numpy as np
 
 class ModelInterface(metaclass=abc.ABCMeta):
     """
@@ -18,6 +19,28 @@ class ModelInterface(metaclass=abc.ABCMeta):
         """
         self.args = args
         self.gpu = gpu
+        self.dict = {}
+        self.SetupModel()
+
+    def SetupModel(self):
+        self.args.isMaster = self.gpu == 0
+        self.RandomGenerator = np.random.RandomState(42)
+        self.set_networks()
+        self.set_optimizers()
+
+        if self.args.use_mGPU:
+            self.set_multi_GPU()
+
+        if self.args.load_ckpt:
+            self.load_checkpoint()
+
+        self.set_dataset()
+        self.set_data_iterator()
+        self.set_validation()
+        self.set_loss_collector()
+
+        if self.args.isMaster:
+            print(f'Model {self.args.model_id} has successively created')
 
     def load_next_batch(self):
         """
@@ -55,16 +78,16 @@ class ModelInterface(metaclass=abc.ABCMeta):
         Predefine test images only if args.valid_dataset_root is specified.
         These images are anchored for checking the improvement of the model.
         """
-        if self.args.valid_dataset_root:
+        if self.args.use_validation:
             self.valid_dataloader = DataLoader(self.valid_dataset, batch_size=self.args.batch_per_gpu, num_workers=8, drop_last=True)
             I_source, I_target = next(iter(self.valid_dataloader))
             self.valid_source, self.valid_target = I_source.to(self.gpu), I_target.to(self.gpu)
 
     @abc.abstractmethod
-    def initialize_models(self):
+    def set_networks(self):
         """
-        Construct models, send it to GPU, and set training mode.
-        Models should be assigned to member variables.
+        Construct networks, send it to GPU, and set training mode.
+        Networks should be assigned to member variables.
 
         eg. self.D = Discriminator(input_nc=3).cuda(self.gpu).train() 
         """
@@ -86,7 +109,7 @@ class ModelInterface(metaclass=abc.ABCMeta):
         checkpoint.save_checkpoint(self.args, self.D, self.opt_D, name='D', global_step=global_step)
         
         if self.args.isMaster:
-            print(f"\nPretrained parameters are succesively saved in {self.args.save_root}/{self.args.run_id}/ckpt/\n")
+            print(f"\nCheckpoints are succesively saved in {self.args.save_root}/{self.args.run_id}/ckpt/\n")
     
     def load_checkpoint(self):
         """
@@ -121,7 +144,7 @@ class ModelInterface(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def train_step(self):
+    def go_step(self):
         """
         Implement a single iteration of training. This will be called repeatedly in a loop. 
         This method should return list of images that was created during training.
@@ -131,9 +154,11 @@ class ModelInterface(metaclass=abc.ABCMeta):
         pass
 
     @abc.abstractmethod
-    def validation(self):
+    def do_validation(self):
         """
         Test the model using a predefined valid set.
         This method includes util.save_image and returns nothing.
         """
         pass
+
+    
