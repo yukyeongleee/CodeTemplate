@@ -43,5 +43,10 @@
 
 # 1.7 @ May 21, 2022
 
-- Fix README.md and add README_BLACK.md 
-
+- Add a method, setup_model, in the model_interface class
+- Fix ./README.md, put ./README_BLACK.md to ./.gitgub 
+- Fix ./YourModel to ./MyModel
+- Fix a method, set_attribute, in the Config class
+- Remove a function, wandb alert
+- Remove ./ptnns, add ./packages
+- Delete ./lib/Model_loader
