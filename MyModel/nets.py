@@ -135,9 +135,15 @@ class MyGenerator(nn.Module):
         )
         self.last_layer = nn.Sequential(nn.ReflectionPad2d(3), nn.Conv2d(64, output_nc, kernel_size=7, padding=0))
 
+    def get_id(self, image):
+        return self.ArcFace.get_id(image)
+
+    def get_mask(self, image):
+        return self.FaceParser.get_mask(image)
+
     def forward(self, source, target):
-        id_source = self.ArcFace.get_id(source)
-        mask = self.FaceParser.get_mask(target)
+        id_source = self.get_id(source)
+        mask = self.get_mask(target)
         x = target 
 
         skip1 = self.first_layer(x)

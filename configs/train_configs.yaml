@@ -1,3 +1,5 @@
+# warning: do not use *tuple* in yaml file
+
 # model 
 model_id: MyModel
 
@@ -23,8 +25,10 @@ save_root: train_result
 # learning rate
 lr_G: 0.0001
 lr_D: 0.00001
-beta1: 0
-beta2: 0.999
+
+# optimizer 
+optimizer: Ranger # [Ranger, Adam]
+betas: [0.95, 0.999] # default: Adam (0.9, 0.999) / Ranger (0.95, 0.999)
 
 # weight of loss
 W_adv: 1

@@ -47,6 +47,7 @@
 - Fix ./README.md, put ./README_BLACK.md to ./.gitgub 
 - Fix ./YourModel to ./MyModel
 - Fix a method, set_attribute, in the Config class
+- Change name ptnn to ckpt
 - Remove a function, wandb alert
 - Remove ./ptnns, add ./packages
 - Delete ./lib/Model_loader

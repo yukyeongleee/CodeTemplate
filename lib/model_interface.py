@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from lib.dataset import PairedFaceDatasetTrain, PairedFaceDatasetValid
 from lib import utils, checkpoint
 import numpy as np
+from packages import Ranger
 
 class ModelInterface(metaclass=abc.ABCMeta):
     """
@@ -124,8 +125,13 @@ class ModelInterface(metaclass=abc.ABCMeta):
             print(f"Pretrained parameters are succesively loaded from {self.args.save_root}/{self.args.ckpt_id}/ckpt/")
 
     def set_optimizers(self):
-        self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.args.lr_G, betas=(self.args.beta1, self.args.beta2))
-        self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.args.lr_D, betas=(self.args.beta1, self.args.beta2))
+        if self.args.optimizer == "Adam":
+            self.opt_G = torch.optim.Adam(self.G.parameters(), lr=self.args.lr_G, betas=self.args.betas)
+            self.opt_D = torch.optim.Adam(self.D.parameters(), lr=self.args.lr_D, betas=self.args.betas)
+            
+        if self.args.optimizer == "Ranger":
+            self.opt_G = Ranger(self.G.parameters(), lr=self.args.lr_G, betas=self.args.betas)
+            self.opt_D = Ranger(self.D.parameters(), lr=self.args.lr_D, betas=self.args.betas)
 
     @abc.abstractmethod
     def set_loss_collector(self):

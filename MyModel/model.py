@@ -50,7 +50,7 @@ class MyModel(ModelInterface):
     def run_G(self):
         I_swapped, id_source = self.G(self.dict["I_source"], self.dict["I_target"])
         I_cycle, _ = self.G(self.dict["I_target"], I_swapped)
-        id_swapped = self.G.ArcFace.get_id(I_swapped)
+        id_swapped = self.G.get_id(I_swapped)
         d_adv, feat_fake = self.D(I_swapped, None)
         feat_real = self.D.get_feature(self.dict["I_target"])
 
