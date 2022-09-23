@@ -31,14 +31,14 @@ class MyModel(ModelInterface):
 
         # update G
         loss_G = self.loss_collector.get_loss_G(self.dict)
-        utils.update_net(self.opt_G, loss_G)
+        utils.update_net(self.G, self.opt_G, loss_G)
 
         # run D
         self.run_D()
 
         # update D
         loss_D = self.loss_collector.get_loss_D(self.dict)
-        utils.update_net(self.opt_D, loss_D)
+        utils.update_net(self.D, self.opt_D, loss_D)
 
         # print images
         self.train_images = [
